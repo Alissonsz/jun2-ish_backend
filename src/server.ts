@@ -2,10 +2,14 @@ import express from 'express';
 import { Server } from 'socket.io';
 import { createServer } from 'http';
 import cors from 'cors';
+import RoomRepository from './repositories/room';
 
 const app = express();
 app.use(cors());
+app.use(express.json());
+
 const server = createServer(app);
+const roomRepository = new RoomRepository();
 
 const io = new Server(server, {
   cors: {
@@ -13,23 +17,54 @@ const io = new Server(server, {
   },
 });
 
-interface ChatMessage {
-  author: string;
-  content: string;
-}
-
 server.listen(8080, () => {
   console.log('Listening on 8080');
+});
+
+app.get('/rooms', (req, res) => {
+  const rooms = roomRepository.index();
+  return res.json({
+    rooms,
+  });
+});
+
+app.post('/room', (req, res) => {
+  const room = req.body;
+
+  roomRepository.create(room);
+
+  const rooms = roomRepository.index();
+
+  return res.json({
+    rooms,
+  });
+});
+
+app.get('/room/:id', (req, res) => {
+  const { id } = req.params;
+
+  const room = roomRepository.findById(Number(id));
+
+  return res.json({
+    room,
+  });
 });
 
 io.on('connection', (socket) => {
   console.log(socket.handshake.address);
 
-  socket.on('test', (data) => {
-    console.log(data);
+  socket.on('disconnect', (data) => {
+    console.log('disconnected');
   });
 
-  socket.on('newMessage', (data: ChatMessage) => {
-    console.log(`New message: ${JSON.stringify(data)}`);
+  socket.on('joinRoom', (data) => {
+    socket.join(data.roomId);
+
+    io.to(data.roomId).emit('newUserJoined', { nickname: data.nickname });
+  });
+
+  socket.on('newMessage', (data) => {
+    roomRepository.addMessage(data.roomId, data.message);
+    io.to(data.roomId).emit('newMessage', data.message);
   });
 });
