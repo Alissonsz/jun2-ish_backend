@@ -1,10 +1,12 @@
+import { uuid } from 'uuidv4';
+
 interface ChatMessage {
   author: string;
   content: string;
 }
 
 interface Room {
-  id: number;
+  id: string;
   name: string;
   videoUrl: string;
   messages: ChatMessage[];
@@ -21,7 +23,7 @@ class RoomRepository {
     return this.rooms;
   }
 
-  public addMessage(roomId: number, message: ChatMessage): void {
+  public addMessage(roomId: string, message: ChatMessage): void {
     const room = this.rooms.find((curRoom) => curRoom.id === roomId);
 
     if (room) {
@@ -31,16 +33,26 @@ class RoomRepository {
     }
   }
 
-  public findById(id: number): Room | undefined {
+  public findById(id: string): Room | undefined {
     const room = this.rooms.find((curRoom) => curRoom.id === id);
 
     return room;
   }
 
   public create(room: Room): void {
-    const roomWithId = { ...room, id: Math.round(Math.random() * 100) };
+    const roomWithId = { ...room, id: uuid() };
 
     this.rooms.push(roomWithId);
+  }
+
+  public updateVideo(roomId: string, url: string):void {
+    const room = this.rooms.find((curRoom) => curRoom.id === roomId);
+
+    if (room) {
+      room.videoUrl = url;
+    } else {
+      throw new Error('Not found');
+    }
   }
 }
 

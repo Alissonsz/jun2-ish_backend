@@ -43,7 +43,7 @@ app.post('/room', (req, res) => {
 app.get('/room/:id', (req, res) => {
   const { id } = req.params;
 
-  const room = roomRepository.findById(Number(id));
+  const room = roomRepository.findById(id);
 
   return res.json({
     room,
@@ -66,5 +66,10 @@ io.on('connection', (socket) => {
   socket.on('newMessage', (data) => {
     roomRepository.addMessage(data.roomId, data.message);
     io.to(data.roomId).emit('newMessage', data.message);
+  });
+
+  socket.on('changeVideo', (data) => {
+    roomRepository.updateVideo(data.roomId, data.videoUrl);
+    io.to(data.roomId).emit('videoChanged', data.videoUrl);
   });
 });
