@@ -8,6 +8,7 @@ interface ChatMessage {
 interface Room {
   id: string;
   name: string;
+  userCount: number;
   videoUrl: string;
   messages: ChatMessage[];
 }
@@ -39,10 +40,19 @@ class RoomRepository {
     return room;
   }
 
-  public create(room: Room): void {
-    const roomWithId = { ...room, id: uuid() };
+  public create(room: Room): Room {
+    const roomWithId = {
+      ...room, id: uuid(), messages: [], userCount: 0,
+    };
 
     this.rooms.push(roomWithId);
+    return roomWithId;
+  }
+
+  public destroy(roomId: string): void {
+    const roomIndex = this.rooms.findIndex((curRoom) => curRoom.id === roomId);
+
+    this.rooms.splice(roomIndex, 1);
   }
 
   public updateVideo(roomId: string, url: string):void {
@@ -53,6 +63,28 @@ class RoomRepository {
     } else {
       throw new Error('Not found');
     }
+  }
+
+  public incrementUserCount(roomId: string):Room {
+    const room = this.rooms.find((curRoom) => curRoom.id === roomId);
+
+    if (room) {
+      room.userCount += 1;
+      return room;
+    }
+
+    throw new Error('Not found');
+  }
+
+  public decrementUserCount(roomId: string):Room {
+    const room = this.rooms.find((curRoom) => curRoom.id === roomId);
+
+    if (room) {
+      room.userCount -= 1;
+      return room;
+    }
+
+    throw new Error('Not found');
   }
 }
 

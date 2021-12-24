@@ -31,12 +31,10 @@ app.get('/rooms', (req, res) => {
 app.post('/room', (req, res) => {
   const room = req.body;
 
-  roomRepository.create(room);
-
-  const rooms = roomRepository.index();
+  const createdRoom = roomRepository.create(room);
 
   return res.json({
-    rooms,
+    room: createdRoom,
   });
 });
 
@@ -53,12 +51,25 @@ app.get('/room/:id', (req, res) => {
 io.on('connection', (socket) => {
   console.log(socket.handshake.address);
 
-  socket.on('disconnect', (data) => {
-    console.log('disconnected');
+  socket.on('disconnect', () => {
+    console.log('disconnected', socket.roomId);
+
+    try {
+      const room = roomRepository.decrementUserCount(socket.roomId);
+
+      if (room.userCount <= 0) {
+        roomRepository.destroy(socket.roomId);
+        console.log('Room destroyed');
+      }
+    } catch {
+      console.log('Something went wrong');
+    }
   });
 
   socket.on('joinRoom', (data) => {
+    roomRepository.incrementUserCount(data.roomId);
     socket.join(data.roomId);
+    socket.roomId = data.roomId;
 
     io.to(data.roomId).emit('newUserJoined', { nickname: data.nickname });
   });
