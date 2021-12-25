@@ -43,9 +43,12 @@ app.get('/room/:id', (req, res) => {
 
   const room = roomRepository.findById(id);
 
-  return res.json({
-    room,
-  });
+  if (room !== undefined) {
+    return res.json({
+      room,
+    });
+  }
+  return res.sendStatus(404);
 });
 
 io.on('connection', (socket) => {
@@ -67,11 +70,18 @@ io.on('connection', (socket) => {
   });
 
   socket.on('joinRoom', (data) => {
-    roomRepository.incrementUserCount(data.roomId);
-    socket.join(data.roomId);
-    socket.roomId = data.roomId;
+    try {
+      roomRepository.incrementUserCount(data.roomId);
+      socket.join(data.roomId);
+      socket.roomId = data.roomId;
 
-    io.to(data.roomId).emit('newUserJoined', { nickname: data.nickname });
+      io.to(data.roomId).emit('newUserJoined', { nickname: data.nickname });
+
+      const room = roomRepository.findById(data.roomId);
+      socket.emit('videoState', { progress: room?.progress || 0, playing: room?.playing || false });
+    } catch {
+      console.log('Something went wrong');
+    }
   });
 
   socket.on('newMessage', (data) => {
@@ -82,5 +92,31 @@ io.on('connection', (socket) => {
   socket.on('changeVideo', (data) => {
     roomRepository.updateVideo(data.roomId, data.videoUrl);
     io.to(data.roomId).emit('videoChanged', data.videoUrl);
+  });
+
+  socket.on('videoPlayingChanged', (data) => {
+    console.log('videoPlayingChanged', data);
+    try {
+      roomRepository.updateVideoPlaying(data.roomId, data.playing);
+      io.to(data.roomId).emit('videoPlayingChanged', data.playing);
+    } catch {
+      console.log('Something went wrong');
+    }
+  });
+
+  socket.on('videoSeeked', (data) => {
+    console.log('videoSeeked', data);
+    roomRepository.updateCurrentPlayed(data.roomId, data.seekTo);
+    io.to(data.roomId).emit('videoSeeked', data.seekTo);
+  });
+
+  socket.on('playingProgress', (data) => {
+    console.log('playingProgress', data);
+
+    try {
+      roomRepository.updateCurrentPlayed(data.roomId, data.progress);
+    } catch {
+      console.log('Something went wrong');
+    }
   });
 });

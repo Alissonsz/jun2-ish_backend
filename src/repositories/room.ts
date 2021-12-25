@@ -11,6 +11,8 @@ interface Room {
   userCount: number;
   videoUrl: string;
   messages: ChatMessage[];
+  playing: boolean;
+  progress: number;
 }
 
 class RoomRepository {
@@ -60,6 +62,26 @@ class RoomRepository {
 
     if (room) {
       room.videoUrl = url;
+    } else {
+      throw new Error('Not found');
+    }
+  }
+
+  public updateVideoPlaying(roomId: string, playing: boolean): void {
+    const room = this.rooms.find((curRoom) => curRoom.id === roomId);
+
+    if (room) {
+      room.playing = playing;
+    } else {
+      throw new Error('Not found');
+    }
+  }
+
+  public updateCurrentPlayed(roomId: string, progress: number): void {
+    const room = this.rooms.find((curRoom) => curRoom.id === roomId);
+
+    if (room) {
+      room.progress = progress;
     } else {
       throw new Error('Not found');
     }
