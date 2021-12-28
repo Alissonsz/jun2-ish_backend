@@ -2,23 +2,27 @@ import express from 'express';
 import { Server } from 'socket.io';
 import { createServer } from 'http';
 import cors from 'cors';
+import { DefaultEventsMap } from 'socket.io/dist/typed-events';
 import RoomRepository from './repositories/room';
+import { SocketData } from './types';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+const CLIENT_URL = process.env.CLIENT_URL || 'localhost:3000';
+
 const server = createServer(app);
 const roomRepository = new RoomRepository();
 
-const io = new Server(server, {
+const io = new Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, SocketData>(server, {
   cors: {
-    origin: ['http://localhost:3000'],
+    origin: [CLIENT_URL],
   },
 });
 
-server.listen(8080, () => {
-  console.log('Listening on 8080');
+server.listen(process.env.PORT || 8080, () => {
+  console.log('Server listening 🚀');
 });
 
 app.get('/rooms', (req, res) => {
@@ -52,16 +56,14 @@ app.get('/room/:id', (req, res) => {
 });
 
 io.on('connection', (socket) => {
-  console.log(socket.handshake.address);
-
   socket.on('disconnect', () => {
-    console.log('disconnected', socket.roomId);
+    console.log('disconnected', socket.data.roomId);
 
     try {
-      const room = roomRepository.decrementUserCount(socket.roomId);
+      const room = roomRepository.decrementUserCount(socket.data.roomId!);
 
       if (room.userCount <= 0) {
-        roomRepository.destroy(socket.roomId);
+        roomRepository.destroy(socket.data.roomId!);
         console.log('Room destroyed');
       }
     } catch {
@@ -73,7 +75,7 @@ io.on('connection', (socket) => {
     try {
       roomRepository.incrementUserCount(data.roomId);
       socket.join(data.roomId);
-      socket.roomId = data.roomId;
+      socket.data.roomId = data.roomId;
 
       io.to(data.roomId).emit('newUserJoined', { nickname: data.nickname });
 
@@ -85,13 +87,22 @@ io.on('connection', (socket) => {
   });
 
   socket.on('newMessage', (data) => {
-    roomRepository.addMessage(data.roomId, data.message);
-    io.to(data.roomId).emit('newMessage', data.message);
+    try {
+      roomRepository.addMessage(data.roomId, data.message);
+      io.to(data.roomId).emit('newMessage', data.message);
+    } catch {
+      console.log('Something went wrong');
+    }
   });
 
   socket.on('changeVideo', (data) => {
-    roomRepository.updateVideo(data.roomId, data.videoUrl);
-    io.to(data.roomId).emit('videoChanged', data.videoUrl);
+    try {
+      roomRepository.updateVideo(data.roomId, data.videoUrl);
+      roomRepository.updateCurrentPlayed(data.roomId, 0);
+      io.to(data.roomId).emit('videoChanged', data.videoUrl);
+    } catch {
+      console.log('Something went wrong');
+    }
   });
 
   socket.on('videoPlayingChanged', (data) => {
@@ -106,8 +117,12 @@ io.on('connection', (socket) => {
 
   socket.on('videoSeeked', (data) => {
     console.log('videoSeeked', data);
-    roomRepository.updateCurrentPlayed(data.roomId, data.seekTo);
-    io.to(data.roomId).emit('videoSeeked', data.seekTo);
+    try {
+      roomRepository.updateCurrentPlayed(data.roomId, data.seekTo);
+      io.to(data.roomId).emit('videoSeeked', data.seekTo);
+    } catch {
+      console.log('Something went wrong');
+    }
   });
 
   socket.on('playingProgress', (data) => {
