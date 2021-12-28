@@ -67,7 +67,7 @@ io.on('connection', (socket) => {
         console.log('Room destroyed');
       }
     } catch {
-      console.log('Something went wrong');
+      console.log('Something went wrong disconnect');
     }
   });
 
@@ -82,7 +82,7 @@ io.on('connection', (socket) => {
       const room = roomRepository.findById(data.roomId);
       socket.emit('videoState', { progress: room?.progress || 0, playing: room?.playing || false });
     } catch {
-      console.log('Something went wrong');
+      console.log('Something went wrong joinRoom');
     }
   });
 
@@ -91,7 +91,7 @@ io.on('connection', (socket) => {
       roomRepository.addMessage(data.roomId, data.message);
       io.to(data.roomId).emit('newMessage', data.message);
     } catch {
-      console.log('Something went wrong');
+      console.log('Something went wrong newMessage');
     }
   });
 
@@ -101,7 +101,7 @@ io.on('connection', (socket) => {
       roomRepository.updateCurrentPlayed(data.roomId, 0);
       io.to(data.roomId).emit('videoChanged', data.videoUrl);
     } catch {
-      console.log('Something went wrong');
+      console.log('Something went wrong changeVideo');
     }
   });
 
@@ -109,9 +109,10 @@ io.on('connection', (socket) => {
     console.log('videoPlayingChanged', data);
     try {
       roomRepository.updateVideoPlaying(data.roomId, data.playing);
-      io.to(data.roomId).emit('videoPlayingChanged', data.playing);
+      roomRepository.updateCurrentPlayed(data.roomId, data.progress);
+      io.to(data.roomId).emit('videoPlayingChanged', { playing: data.playing, progress: data.progress });
     } catch {
-      console.log('Something went wrong');
+      console.log('Something went wrong videoPlayingChanged');
     }
   });
 
@@ -121,7 +122,7 @@ io.on('connection', (socket) => {
       roomRepository.updateCurrentPlayed(data.roomId, data.seekTo);
       io.to(data.roomId).emit('videoSeeked', data.seekTo);
     } catch {
-      console.log('Something went wrong');
+      console.log('Something went wrong videoSeeked');
     }
   });
 
@@ -129,7 +130,7 @@ io.on('connection', (socket) => {
     try {
       roomRepository.updateCurrentPlayed(data.roomId, data.progress);
     } catch {
-      console.log('Something went wrong');
+      console.log('Something went wrong playingProgress');
     }
   });
 });
