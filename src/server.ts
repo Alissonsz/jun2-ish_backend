@@ -10,7 +10,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const CLIENT_URL = process.env.CLIENT_URL || 'localhost:3000';
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
 
 const server = createServer(app);
 const roomRepository = new RoomRepository();
@@ -126,8 +126,6 @@ io.on('connection', (socket) => {
   });
 
   socket.on('playingProgress', (data) => {
-    console.log('playingProgress', data);
-
     try {
       roomRepository.updateCurrentPlayed(data.roomId, data.progress);
     } catch {
