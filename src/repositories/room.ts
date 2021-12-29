@@ -5,7 +5,7 @@ interface ChatMessage {
   content: string;
 }
 
-interface Room {
+export interface Room {
   id: string;
   name: string;
   userCount: number;
@@ -18,33 +18,41 @@ interface Room {
 class RoomRepository {
   private rooms: Room[];
 
-  constructor() {
+  // eslint-disable-next-line no-use-before-define
+  private static instance: RoomRepository;
+
+  private constructor() {
     this.rooms = [];
+  }
+
+  public static getInstance(): RoomRepository {
+    if (RoomRepository.instance) return RoomRepository.instance;
+    RoomRepository.instance = new RoomRepository();
+    return RoomRepository.instance;
   }
 
   public index(): Room[] {
     return this.rooms;
   }
 
-  public addMessage(roomId: string, message: ChatMessage): void {
+  public addMessage(roomId: string, message: ChatMessage): Room {
     const room = this.rooms.find((curRoom) => curRoom.id === roomId);
 
     if (room) {
       room.messages.push(message);
-    } else {
-      throw new Error('Not found');
+      return room;
     }
+    throw new Error('Not found');
   }
 
   public findById(id: string): Room | undefined {
     const room = this.rooms.find((curRoom) => curRoom.id === id);
-
     return room;
   }
 
   public create(room: Room): Room {
-    const roomWithId = {
-      ...room, id: uuid(), messages: [], userCount: 0,
+    const roomWithId: Room = {
+      ...room, id: uuid(), messages: [], userCount: 0, playing: false, progress: 0,
     };
 
     this.rooms.push(roomWithId);
@@ -57,37 +65,37 @@ class RoomRepository {
     this.rooms.splice(roomIndex, 1);
   }
 
-  public updateVideo(roomId: string, url: string):void {
+  public updateVideo(roomId: string, url: string): Room {
     const room = this.rooms.find((curRoom) => curRoom.id === roomId);
 
     if (room) {
       room.videoUrl = url;
-    } else {
-      throw new Error('Not found');
+      return room;
     }
+    throw new Error('Not found');
   }
 
-  public updateVideoPlaying(roomId: string, playing: boolean): void {
+  public updateVideoPlaying(roomId: string, playing: boolean): Room {
     const room = this.rooms.find((curRoom) => curRoom.id === roomId);
 
     if (room) {
       room.playing = playing;
-    } else {
-      throw new Error('Not found');
+      return room;
     }
+    throw new Error('Not found');
   }
 
-  public updateCurrentPlayed(roomId: string, progress: number): void {
+  public updateCurrentPlayed(roomId: string, progress: number): Room {
     const room = this.rooms.find((curRoom) => curRoom.id === roomId);
 
     if (room) {
       room.progress = progress;
-    } else {
-      throw new Error('Not found');
+      return room;
     }
+    throw new Error('Not found');
   }
 
-  public incrementUserCount(roomId: string):Room {
+  public incrementUserCount(roomId: string): Room {
     const room = this.rooms.find((curRoom) => curRoom.id === roomId);
 
     if (room) {
@@ -98,7 +106,7 @@ class RoomRepository {
     throw new Error('Not found');
   }
 
-  public decrementUserCount(roomId: string):Room {
+  public decrementUserCount(roomId: string): Room {
     const room = this.rooms.find((curRoom) => curRoom.id === roomId);
 
     if (room) {
