@@ -65,6 +65,10 @@ class RoomRepository {
     this.rooms.splice(roomIndex, 1);
   }
 
+  public destroyAll(): void {
+    this.rooms = [];
+  }
+
   public updateVideo(roomId: string, url: string): Room {
     const room = this.rooms.find((curRoom) => curRoom.id === roomId);
 

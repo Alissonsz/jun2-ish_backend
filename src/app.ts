@@ -1,10 +1,11 @@
 import express from 'express';
-import { Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import { createServer } from 'http';
 import cors from 'cors';
 import { DefaultEventsMap } from 'socket.io/dist/typed-events';
 import RoomRepository from './repositories/room';
 import { SocketData } from './types';
+import registerRoomHandelers from './handlers/roomHandlers';
 
 const app = express();
 app.use(cors());
@@ -51,84 +52,11 @@ app.get('/room/:id', (req, res) => {
   return res.sendStatus(404);
 });
 
-io.on('connection', (socket) => {
-  socket.on('disconnect', () => {
-    console.log('disconnected', socket.data.roomId);
+// eslint-disable-next-line max-len
+const onConnection = (socket: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, SocketData>) => {
+  registerRoomHandelers(io, socket);
+};
 
-    try {
-      const room = roomRepository.decrementUserCount(socket.data.roomId!);
-
-      if (room.userCount <= 0) {
-        roomRepository.destroy(socket.data.roomId!);
-        console.log('Room destroyed');
-      }
-    } catch {
-      console.log('Something went wrong disconnect');
-    }
-  });
-
-  socket.on('joinRoom', (data) => {
-    try {
-      roomRepository.incrementUserCount(data.roomId);
-      socket.join(data.roomId);
-      socket.data.roomId = data.roomId;
-
-      io.to(data.roomId).emit('newUserJoined', { nickname: data.nickname });
-
-      const room = roomRepository.findById(data.roomId);
-      socket.emit('videoState', { progress: room?.progress || 0, playing: room?.playing || false });
-    } catch {
-      console.log('Something went wrong joinRoom');
-    }
-  });
-
-  socket.on('newMessage', (data) => {
-    try {
-      roomRepository.addMessage(data.roomId, data.message);
-      io.to(data.roomId).emit('newMessage', data.message);
-    } catch {
-      console.log('Something went wrong newMessage');
-    }
-  });
-
-  socket.on('changeVideo', (data) => {
-    try {
-      roomRepository.updateVideo(data.roomId, data.videoUrl);
-      roomRepository.updateCurrentPlayed(data.roomId, 0);
-      io.to(data.roomId).emit('videoChanged', data.videoUrl);
-    } catch {
-      console.log('Something went wrong changeVideo');
-    }
-  });
-
-  socket.on('videoPlayingChanged', (data) => {
-    console.log('videoPlayingChanged', data);
-    try {
-      roomRepository.updateVideoPlaying(data.roomId, data.playing);
-      roomRepository.updateCurrentPlayed(data.roomId, data.progress);
-      io.to(data.roomId).emit('videoPlayingChanged', { playing: data.playing, progress: data.progress });
-    } catch {
-      console.log('Something went wrong videoPlayingChanged');
-    }
-  });
-
-  socket.on('videoSeeked', (data) => {
-    console.log('videoSeeked', data);
-    try {
-      roomRepository.updateCurrentPlayed(data.roomId, data.seekTo);
-      io.to(data.roomId).emit('videoSeeked', data.seekTo);
-    } catch {
-      console.log('Something went wrong videoSeeked');
-    }
-  });
-
-  socket.on('playingProgress', (data) => {
-    try {
-      roomRepository.updateCurrentPlayed(data.roomId, data.progress);
-    } catch {
-      console.log('Something went wrong playingProgress');
-    }
-  });
-});
+io.on('connection', onConnection);
 
 export { app, io, server };
