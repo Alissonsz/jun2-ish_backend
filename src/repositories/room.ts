@@ -5,6 +5,12 @@ interface ChatMessage {
   content: string;
 }
 
+interface PlaylistItem {
+  id: number;
+  name: string;
+  url: string;
+}
+
 export interface Room {
   id: string;
   name: string;
@@ -13,6 +19,7 @@ export interface Room {
   messages: ChatMessage[];
   playing: boolean;
   progress: number;
+  playlist: PlaylistItem[];
 }
 
 class RoomRepository {
@@ -52,7 +59,7 @@ class RoomRepository {
 
   public create(room: Room): Room {
     const roomWithId: Room = {
-      ...room, id: uuid(), messages: [], userCount: 0, playing: false, progress: 0,
+      ...room, id: uuid(), messages: [], userCount: 0, playing: false, progress: 0, playlist: [],
     };
 
     this.rooms.push(roomWithId);
@@ -116,6 +123,52 @@ class RoomRepository {
     if (room) {
       room.userCount -= 1;
       return room;
+    }
+
+    throw new Error('Not found');
+  }
+
+  public updatePlaylist(roomId: string, playlist: PlaylistItem[]): Room {
+    const room = this.rooms.find((curRoom) => curRoom.id === roomId);
+
+    if (room) {
+      room.playlist = playlist;
+      return room;
+    }
+
+    throw new Error('Not found');
+  }
+
+  public addToPlaylist(roomId: string, item: PlaylistItem): Room {
+    const room = this.rooms.find((curRoom) => curRoom.id === roomId);
+
+    if (room) {
+      room.playlist.push(item);
+      return room;
+    }
+
+    throw new Error('Not found');
+  }
+
+  public RemoveFromPlaylist(roomId: string, item: PlaylistItem): Room {
+    const room = this.rooms.find((curRoom) => curRoom.id === roomId);
+
+    if (room) {
+      const index = room.playlist.findIndex((video) => video.id === item.id);
+
+      room.playlist.splice(index, 1);
+      return room;
+    }
+
+    throw new Error('Not found');
+  }
+
+  public RemoveFirstFromPlaylist(roomId: string): PlaylistItem | undefined {
+    const room = this.rooms.find((curRoom) => curRoom.id === roomId);
+
+    if (room && room.playlist.length > 0) {
+      const item = room.playlist.shift();
+      return item;
     }
 
     throw new Error('Not found');

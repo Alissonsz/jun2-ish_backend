@@ -8,6 +8,7 @@ const mockedRoom = () => ({
   userCount: 0,
   playing: false,
   progress: 0,
+  playlist: [],
 });
 
 describe('Room repository', () => {
