@@ -89,6 +89,33 @@ export default (
     }
   }));
 
+  socket.on('addVideoToPlaylist', register(async (data) => {
+    try {
+      roomRepository.addToPlaylist(data.roomId, data.video);
+      io.to(data.roomId).emit('addedToPlaylist', data.video);
+    } catch {
+      console.log('Something went wrong addVideoToPlaylist');
+    }
+  }));
+
+  socket.on('updatePlaylist', register(async (data) => {
+    try {
+      roomRepository.updatePlaylist(data.roomId, data.list);
+      io.to(data.roomId).emit('playlistUpdated', data.list);
+    } catch {
+      console.log('Something went wrong updatePlaylist');
+    }
+  }));
+
+  socket.on('playNext', register(async (data) => {
+    try {
+      const item = roomRepository.RemoveFirstFromPlaylist(data.roomId);
+      io.to(data.roomId).emit('playNext', item);
+    } catch {
+      console.log('Something went wrong playNext');
+    }
+  }));
+
   socket.on('disconnect', register(async () => {
     console.log('disconnected', socket.data.roomId);
 
